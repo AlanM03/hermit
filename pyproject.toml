@@ -1,0 +1,10 @@
+[project]
+name = "hermit-cli"
+version = "0.1.0"
+dependencies = [
+    "typer",
+    "requests",
+]
+
+[project.scripts]
+hermit = "hermit.cli:app"
