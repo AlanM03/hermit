@@ -5,13 +5,13 @@ import os
 
 app = typer.Typer(no_args_is_help=True)
 
-#First command to init hermit into your project, since chromadb is not up yet this is a placeholder
+#since chromadb is not up yet this is a placeholder
 @app.command(name="init", help="Initialize Hermit for a new project.")
 def initialize_project():
     """
-    Sets up project context database.
+    Sets up project.
     """
-    print("🚀 Initializing Hermit for this project...")
+    print("Initializing Hermit...")
     project_path = os.getcwd()
 
     try:
@@ -60,7 +60,7 @@ def semantic_commit():
     try:
         
         git_diff_command = ["git", "diff", "--staged"]#runs command git diff --staged
-        diff_process = subprocess.run(git_diff_command, capture_output=True, text=True, check=True)#cli commands run a 0 on success so we check to see if that happened with 'check=True'
+        diff_process = subprocess.run(git_diff_command, capture_output=True, text=True, check=True, encoding='utf-8')#cli commands run a 0 on success so we check to see if that happened with 'check=True'
         staged_diff = diff_process.stdout
 
         if not staged_diff:#if no staged changes are found quit cli
@@ -80,7 +80,7 @@ def semantic_commit():
     #if first try works we can attempt the api call
     try:
         api_url = "http://127.0.0.1:8000/api/semantic-commit"
-        response = requests.post(api_url, json={"diff": staged_diff}, timeout=30)
+        response = requests.post(api_url, json={"diff": staged_diff}, timeout=60)
         response.raise_for_status()
 
     except requests.exceptions.ConnectionError:#if server isnt running at all
