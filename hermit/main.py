@@ -24,16 +24,6 @@ async def stream_ollama_responses(payload: dict):
     for chunk in stream:
         yield chunk['message']['content']
 
-@app.post("/api/generate")
-async def generate(request: PromptRequest):
-    """
-    The main API route. It receives a prompt and streams back the response.
-    """
-    payload = request.model_dump()
-    return StreamingResponse(
-        stream_ollama_responses(payload), 
-        media_type="text/plain"
-    )
 
 @app.post("/api/ponder")
 async def ponder(request: PromptRequest):
