@@ -166,7 +166,7 @@ def run_and_diagnose(words_after_dashes: typer.Context):# to get commands after 
         else:#if not found let the user know
             print(f"File with error not found analyzing general error")
     
-        payload = {"error_log": log_content, "source_code": source_code} # Add source_code to payload
+        payload = {"error_log": log_content, "source_code": source_code}
        
         with make_api_request(endpoint="/api/diagnose", payload=payload, stream=True) as response:
             for chunk in response.iter_content(chunk_size=None, decode_unicode=True):
