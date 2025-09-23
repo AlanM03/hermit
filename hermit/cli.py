@@ -3,6 +3,7 @@ import requests
 import subprocess
 import os
 import re
+from rich import print as coolPrint
 
 API_URL = "http://127.0.0.1:8000"
 
@@ -21,20 +22,20 @@ def make_api_request(endpoint: str, payload: dict, stream: bool = False):
         return response
     
     except requests.exceptions.ConnectionError:
-        print("✗ Error ✗: Could not connect to the Hermit daemon. Please make sure it's running.")
+        coolPrint("[bold red]✗[/bold red] [#DCDCDC]Error[/#DCDCDC] [bold red]✗[/bold red][#DCDCDC]:[/#DCDCDC] [#A0A0A0]Could not connect to the Hermit daemon. Please make sure it's running.[/#A0A0A0]")
         raise typer.Exit(code=1)
     except requests.exceptions.Timeout:
-        print("✗ Error ✗: The connection to the Hermit daemon timed out.")
+        coolPrint(f"[bold red]✗[/bold red] [#DCDCDC]Error[/#DCDCDC] [/bold red]✗[bold red][#DCDCDC]:[/#DCDCDC] [#A0A0A0]The connection to the Hermit daemon timed out.[/#A0A0A0]")
         raise typer.Exit(code=1)
     except requests.exceptions.HTTPError as err:
-        print(f"✗ Error ✗: The Hermit daemon returned an error (Status Code: {err.response.status_code}).")
-        print(f"Response: {err.response.text}")
+        coolPrint(f"[bold red]✗[/bold red] [#DCDCDC]Error[/#DCDCDC] [bold red]✗[/bold red][#DCDCDC]:[/#DCDCDC] [#A0A0A0]The Hermit daemon returned an error (Status Code:[/#A0A0A0] [bold red]{err.response.status_code}[/bold red][#A0A0A0]).[/#A0A0A0]")
+        coolPrint(f"[#A0A0A0]Response:[/#A0A0A0] [bold red]{err.response.text}[/bold red]")
         raise typer.Exit(code=1)
     except requests.exceptions.RequestException as err:
-        print(f"✗ Error ✗: An unexpected network error occurred: {err}")
+        coolPrint(f"[bold red]✗[/bold red] [#DCDCDC]Error[/#DCDCDC] [bold red]✗[/bold red][#DCDCDC]:[/#DCDCDC] [#A0A0A0]An unexpected network error occurred:[/#A0A0A0] [bold red]{err}[/bold red]")
         raise typer.Exit(code=1)
     
-def parse_error_filepath(log: str) -> str | None:
+def parse_error_filepath(log: str) -> str | None:#only works with python for now
     """Finds the last file path mentioned in a Python traceback."""
     matches = re.findall(r'File "([^"]+)"', log)#regex to get filepath
     if matches:
@@ -45,9 +46,7 @@ def parse_error_filepath(log: str) -> str | None:
 #since chromadb is not up yet this is a placeholder
 @app.command(name="init", help="Initialize Hermit for a new project.")
 def initialize_project():
-    """
-    Sets up project.
-    """
+    """Sets up project."""
     print("Initializing Hermit...")
     project_path = os.getcwd()
 
@@ -68,19 +67,19 @@ def initialize_project():
 def ponder(prompt: str):
     """Hermit ponders on your question and gives its best answer."""
 
-    print("Starting thought...\n")
+    coolPrint(f"[#A0A0A0]Starting thought...[/#A0A0A0]\n")
     payload = {"prompt": prompt}
 
     with make_api_request(endpoint="/api/ponder", payload=payload, stream=True) as response:
         for chunk in response.iter_content(chunk_size=None, decode_unicode=True):
-            print(chunk, end="", flush=True)
+            coolPrint(f"[italic #FFFFFF]{chunk}[/italic #FFFFFF]", end="", flush=True)
     print("\n")
 
 @app.command(name="scribe", help="Generate a semantic commit message from staged changes.")
 def semantic_commit():
     """Gets staged git changes and asks the local AI daemon to generate a commit message."""
 
-    print("Getting staged changes...")
+    coolPrint(f"[#A0A0A0]Getting staged changes...[/#A0A0A0]\n")
     try:
         
         git_diff_command = ["git", "diff", "--staged"]#runs command git diff --staged
@@ -89,26 +88,25 @@ def semantic_commit():
         payload = {"diff": staged_diff}
 
         if not staged_diff:#if no staged changes are found quit cli
-            print("No staged changes found. Please `git add` files to commit.")
+            coolPrint(f"[bold red]No staged changes found.[/bold red] [#DCDCDC]Please[/#DCDCDC] [#A0A0A0]`git add`[/#A0A0A0] [#DCDCDC]files to commit.[/#DCDCDC]\n")
             raise typer.Exit()
         
     except subprocess.CalledProcessError as err: #if the subprocess returns a code other than 0 because of the check above we can give this specific error
-        print("✗ Error ✗: The 'git diff --staged' command failed.")
-        print(f"Git returned a non-zero exit code: {err.returncode}")#gives code back
-        print("\n--- Error from Git ---")
-        print(err.stderr)#gives desc of actual error
-        print("----------------------")
+        coolPrint(f"[bold red]✗[/bold red] [#DCDCDC]Error[/#DCDCDC] [bold red]✗[/bold red][#DCDCDC]: The[/#DCDCDC] [#A0A0A0]'git diff --staged'[/#A0A0A0] [#DCDCDC]command failed.[/#DCDCDC]")
+        coolPrint(f"[#DCDCDC]Git returned a non-zero exit code:[/#DCDCDC] [bold red]{err.returncode}[/bold red]")#gives code back
+        coolPrint(f"\n[#A0A0A0]--- Error from Git ---[/#A0A0A0]")
+        coolPrint(f"[bold red]{err.stderr}[/bold red]\n")#gives desc of actual error
         raise typer.Exit(code=1)
 
-    print("Hermit Generating...")
+    coolPrint(f"[#DCDCDC]Hermit Generating...[/#DCDCDC]")
 
     response = make_api_request(endpoint="/api/semantic-commit", payload=payload, stream=False)# we give this paylaod back to fast api class
 
     commit_message = response.json().get("commit_message")#take successful response and print it out as desired
-    print("\n" + "="*100)
-    print("Suggested Commit Message:")
-    print("="*100 + "\n")
-    print(commit_message)
+    coolPrint("\n" + "[#DCDCDC]=[/#DCDCDC]"*100)
+    coolPrint(f"[#A0A0A0]Suggested Commit Message:[/#A0A0A0]")
+    coolPrint(f"[#DCDCDC]=[/#DCDCDC]"*100 + "\n")
+    coolPrint(f"[#FFFFFF]{commit_message}[/#FFFFFF]")
     print("\n")
 
 @app.command(name="diagnose", help="Runs a command and diagnoses it if it fails.", context_settings={"allow_extra_args": True, "ignore_unknown_options": True})# to not throw errors
@@ -118,41 +116,46 @@ def run_and_diagnose(words_after_dashes: typer.Context):# to get commands after 
     command_to_run = words_after_dashes.args 
 
     if not command_to_run:
-        print("Please provide a command to run. Example: `hermit run -- python my_script.py`")
+        coolPrint(f"[bold red]Please provide a command to run.[/bold red] [#A0A0A0]Example: `hermit run -- python my_script.py`[/#A0A0A0]")
         raise typer.Exit()
 
-    print(f"Running command: {' '.join(command_to_run)}")#for looks
-    print("-" * 100)
+    try:
+        coolPrint(f"[#DCDCDC]Running command:[/#DCDCDC] [#A0A0A0]{' '.join(command_to_run)}[/#A0A0A0]\n")#for looks
+        
+        
+        # This is the line that might fail
+        process = subprocess.Popen(
+            command_to_run,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            encoding='utf-8',
+        )
 
-    # Use Popen to run the command and open a stream
-    process = subprocess.Popen(
-        command_to_run,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT, # Combine stdout and stderr into one stream
-        text=True,
-        encoding='utf-8',
-        bufsize=1 
-    )
+    except FileNotFoundError:
+        # This block runs ONLY if the command was not found
+        coolPrint(f"[bold red]Error: Command not found ->[/bold red] [#DCDCDC]'{command_to_run[0]}'[/#DCDCDC]")
+        coolPrint("[#A0A0A0]Please check if the command is correct and installed on your system.[/#A0A0A0]")
+        raise typer.Exit(code=1) # Exit with an error code
 
     full_log = []
     # Read and print the output line by line, in real-time
     for line in process.stdout:
-        print(line, end="")
+        coolPrint(f"[bold red]{line}[/bold red]", end="")
         full_log.append(line)
 
     # Wait for the process to finish and get the return code
     process.wait()
     return_code = process.returncode
     
-    print("-" * 100)
 
     # If the command failed, send the captured log for diagnosis
     if return_code != 0:
-        print(f"✗ Command failed with exit code {return_code}. ✗ \n\n Sending to Hermit for diagnosis...")
+        coolPrint(f"\n[bold red]✗[/bold red] [#DCDCDC]Command failed with exit code[/#DCDCDC] [bold red]{return_code}[/bold red][#DCDCDC].[/#DCDCDC] [bold red]✗[/bold red] \n\n [bold italic #A0A0A0]Sending to Hermit for diagnosis...[/bold italic #A0A0A0]")
 
-        print("\n" + "="*12)
-        print("  Analysis: ")
-        print("="*12 + "\n")
+        coolPrint(f"\n" + "[#DCDCDC]=[/#DCDCDC]"*13)
+        coolPrint(f"  [#A0A0A0]Analysis:[/#A0A0A0]  ")
+        coolPrint(f"[#DCDCDC]=[/#DCDCDC]"*13 + "\n")
         
         log_content = "".join(full_log)
         source_code = None
@@ -160,21 +163,21 @@ def run_and_diagnose(words_after_dashes: typer.Context):# to get commands after 
         #looks at your log error produced which holds your filepath and analyses code from file as such
         filepath = parse_error_filepath(log_content)
         if filepath and os.path.exists(filepath):
-            print(f"Found error in file: {filepath}. Reading for context...")
+            coolPrint(f"[#DCDCDC]Found error in file:[/#DCDCDC] [bold #A0A0A0]{filepath}[/bold #A0A0A0] [#DCDCDC]Reading for context...[/#DCDCDC]\n")
             with open(filepath, 'r', encoding='utf-8') as f:
                 source_code = f.read()
         else:#if not found let the user know
-            print(f"File with error not found analyzing general error")
+            coolPrint(f"[#DCDCDC]File with error not found:[/#DCDCDC] [#A0A0A0]analyzing general error[/#A0A0A0]\n")
     
         payload = {"error_log": log_content, "source_code": source_code}
        
         with make_api_request(endpoint="/api/diagnose", payload=payload, stream=True) as response:
             for chunk in response.iter_content(chunk_size=None, decode_unicode=True):
-                print(chunk, end="", flush=True)
+                coolPrint(f"[italic #FFFFFF]{chunk}[/italic #FFFFFF]", end="", flush=True)
         print("\n")
     
     else:
-        print("There were no errors and the code ran sucessfully!")
+        coolPrint("[#FFFFFF]There were no errors and the code ran sucessfully![/#FFFFFF]\n")
 
 
 if __name__ == "__main__":
