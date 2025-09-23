@@ -2,6 +2,8 @@ import ollama
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+import logging
+from typing import Optional
 
 app = FastAPI()
 
@@ -11,6 +13,10 @@ class PromptRequest(BaseModel):
 
 class DiffRequest(BaseModel):
     diff: str
+
+class ErrorRequest(BaseModel):
+    error_log: str
+    source_code: Optional[str] = None #source code not needed since theres a chance the operation can fail
 
 async def stream_ollama_responses(payload: dict):
     """
@@ -80,3 +86,39 @@ async def semantic_commit_from_diff(request: DiffRequest):
 
     commit_message = response['message']['content']#we extract the content and return the following 
     return {"commit_message": commit_message}
+
+
+@app.post("/api/diagnose")
+async def diagnose_error_handler(request: ErrorRequest):
+    """Receives an error log and uses Ollama to explain it.
+    """
+    code_context = ""
+    if request.source_code:
+        code_context = f"""
+        Here is the full source code of the file where the error occurred:
+        ```python
+        {request.source_code}
+        ```
+        """
+    else:
+        "In this case the file path can not be found so acknowledge that and give general advice to solve error"
+
+    analysis_prompt = f"""
+    You are an expert developer and debugging assistant.
+    Analyze the following terminal output and error traceback.
+    {code_context} 
+    Based on the error log and the provided source code, explain the root cause of the error in simple terms.
+    Then, provide a list of the most likely solutions to fix it.
+
+    Error Log:
+    ```
+    {request.error_log}
+    ```
+    """
+
+    payload = {"prompt": analysis_prompt, "model": "llama3.1"} 
+
+    return StreamingResponse(
+        stream_ollama_responses(payload), 
+        media_type="text/plain"
+    )
