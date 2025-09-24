@@ -2,9 +2,17 @@
 name = "hermit-cli"
 version = "0.1.0"
 dependencies = [
-    "typer",
+    "typer[all]",
     "requests",
+    "fastapi",
+    "uvicorn",
+    "ollama",
+    "chromadb",
+    "toml",
 ]
 
 [project.scripts]
 hermit = "hermit.cli:app"
+
+[tool.setuptools]
+packages = ["hermit"]
