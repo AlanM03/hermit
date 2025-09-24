@@ -1,4 +1,4 @@
-![hermit cli screenshot](./assets/hermit.png)
+![hermit cli screenshot](./assets/hermit-cli.png)
 
 A local-first, privacy-focused AI developer assistant.
 
@@ -11,5 +11,6 @@ Ask Hermit a question using the `ponder` command.
 
 Starting thought...
 
-*Does the tower hold sway over the sorcerer's essence, or does the sorcerer's mere presence animate the tower into *being, and thus do we ponder: Is it the tower that exists, or is it merely the sorcerer's own echo?
+*Does the tower hold sway over the sorcerer's essence, or does the sorcerer's mere presence animate the tower into being,
+and thus do we ponder: Is it the tower that exists, or is it merely the sorcerer's own echo?*
 ```
