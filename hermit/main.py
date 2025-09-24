@@ -141,6 +141,12 @@ async def semantic_commit_from_diff(request: DiffRequest):
 async def diagnose_error_handler(request: ErrorRequest):
     """Receives an error log and uses Ollama to explain it."""
 
+    if request.source_code:
+        source_code_block = f"```\n{request.source_code}\n```"
+    else:
+        source_code_block = "Not provided."
+    
+   
     analysis_prompt = f"""
     You are an expert debugging assistant, skilled in diagnosing both programming errors from files and general command-line issues.
 
@@ -148,17 +154,15 @@ async def diagnose_error_handler(request: ErrorRequest):
 
     **Analysis Steps:**
     1.  **Identify the Error Type:** First, determine if the error is from a script (a file path and source code will likely be present) or a general shell command error (e.g., 'command not found', a typo like 'gitttt').
-
     2.  **Analyze Based on Type:**
         * **If it is a script error:** Use the file extension to infer the programming language. Analyze the error log and the source code together to find the root cause.
         * **If it is a shell command error:** Focus on the command itself. Analyze the error message to identify issues like typos, incorrect arguments, or a missing program.
-
     3.  **Provide a Solution:** In all cases, explain the root cause of the error in simple terms and provide a clear, numbered list of the most likely solutions.
 
     ---
     **Provided Context:**
     - File Extension: `{request.file_extension or "Not available"}`
-    - Source Code: {f"```\n{request.source_code}\n```" if request.source_code else "Not provided."}
+    - Source Code: {source_code_block}
 
     **Error Log to Analyze:**
     ```
