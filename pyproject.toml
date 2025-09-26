@@ -1,18 +1,41 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "hermit-cli"
 version = "0.1.0"
+authors = [
+  { name="Your Name", email="you@example.com" },
+]
+description = "A local-first AI developer assistant."
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+# Add all your project dependencies here
 dependencies = [
     "typer[all]",
     "requests",
+    "rich",
+    "questionary",
+    "toml",
     "fastapi",
     "uvicorn",
+    "openai",
+    "httpx",
     "ollama",
     "chromadb",
-    "toml",
 ]
 
 [project.scripts]
-hermit = "hermit.cli:app"
+# This section creates the command-line tools when a user runs 'pip install'
+hermit = "hermit.cli.main:app"
+hermit-daemon = "hermit.daemon.main:run"
 
 [tool.setuptools]
-packages = ["hermit"]
+packages = ["hermit", "hermit.cli", "hermit.daemon"]
+

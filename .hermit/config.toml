@@ -1,2 +1,22 @@
-[model]
-default = "deepseek-r1:latest"
+active_provider = "ollama"
+active_model = "llama3.1:latest"
+[[providers]]
+name = "ollama"
+baseUrl = "http://localhost:11434/"
+
+[[providers]]
+name = "lm-studio"
+baseUrl = "http://localhost:1234/"
+
+[[providers]]
+name = "koboldcpp"
+baseUrl = "http://localhost:5001/"
+
+[[providers]]
+name = "jan"
+baseUrl = "http://localhost:1337/"
+
+[[providers]]
+name = "gpt4all"
+baseUrl = "http://localhost:4891/"
+
