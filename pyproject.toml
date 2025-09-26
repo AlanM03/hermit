@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "hermit-cli"
 version = "0.1.0"
 authors = [
-  { name="Your Name", email="you@example.com" },
+  { name="Alan", email="alanmackiewicz03@gmail.com" },
 ]
 description = "A local-first AI developer assistant."
 readme = "README.md"
@@ -16,7 +16,6 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
-# Add all your project dependencies here
 dependencies = [
     "typer[all]",
     "requests",
@@ -32,9 +31,13 @@ dependencies = [
 ]
 
 [project.scripts]
-# This section creates the command-line tools when a user runs 'pip install'
 hermit = "hermit.cli.main:app"
 hermit-daemon = "hermit.daemon.main:run"
+
+[project.optional-dependencies]
+dev = [
+    "ruff"
+]
 
 [tool.setuptools]
 packages = ["hermit", "hermit.cli", "hermit.daemon"]
