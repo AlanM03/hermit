@@ -105,7 +105,7 @@ def invoke():
 def ponder(prompt: str):
     """Hermit ponders on your question and gives its best answer."""
 
-    coolPrint(f"[#A0A0A0]Pondering...[/#A0A0A0]\n")
+    coolPrint("[#A0A0A0]Pondering...[/#A0A0A0]\n")
 
     payload = {"prompt": prompt, "project_path": os.getcwd()}
     with make_api_request(
@@ -120,7 +120,7 @@ def ponder(prompt: str):
 def scribe():
     """Generates a semantic commit message from staged changes."""
 
-    coolPrint(f"[#A0A0A0]Getting staged changes...[/#A0A0A0]")
+    coolPrint("[#A0A0A0]Getting staged changes...[/#A0A0A0]")
 
     try:
         git_diff_command = ["git", "diff", "--staged"]
@@ -140,7 +140,7 @@ def scribe():
         coolPrint(f"[bold red]Error running git diff:[/bold red]\n{err.stderr}")
         raise typer.Exit(code=1)
 
-    coolPrint(f"[#A0A0A0]Hermit is scribing...[/#A0A0A0]")
+    coolPrint("[#A0A0A0]Hermit is scribing...[/#A0A0A0]")
 
     payload = {"diff": staged_diff, "project_path": os.getcwd()}
 
@@ -170,7 +170,7 @@ def run_and_diagnose(ctx: typer.Context):
     coolPrint(
         f"[#DCDCDC]Running command:[/#DCDCDC] [#A0A0A0]{' '.join(command_to_run)}[/#A0A0A0]\n"
     )
-    coolPrint(f"[#A0A0A0]»»»[/#A0A0A0]" * 50 + "\n\n")
+    coolPrint("[#A0A0A0]»»»[/#A0A0A0]" * 50 + "\n\n")
 
     try:
         process = subprocess.Popen(
@@ -197,7 +197,7 @@ def run_and_diagnose(ctx: typer.Context):
     return_code = process.returncode
 
     print("\n")
-    coolPrint(f"[#A0A0A0]»»»[/#A0A0A0]" * 50)
+    coolPrint("[#A0A0A0]»»»[/#A0A0A0]" * 50)
 
     if return_code != 0:
         coolPrint(

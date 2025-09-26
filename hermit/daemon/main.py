@@ -5,7 +5,7 @@ import logging
 import os
 import httpx
 
-logging.basicConfig(level=logging.INFO)
+from .utils import check_config_and_load_client, universal_ai_stream, get_config_path
 
 from .models import (
     PromptRequest,
@@ -14,7 +14,9 @@ from .models import (
     ScribeRequest,
     ErrorRequest,
 )
-from .utils import check_config_and_load_client, universal_ai_stream, get_config_path
+
+logging.basicConfig(level=logging.INFO)
+
 
 app = FastAPI()
 
