@@ -5,7 +5,7 @@ import logging
 import os
 import httpx
 
-from .utils import check_config_and_load_client, universal_ai_stream, get_config_path
+from .server_utils import check_config_and_load_client, universal_ai_stream, get_config_path
 
 from .models import (
     PromptRequest,

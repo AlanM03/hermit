@@ -7,7 +7,7 @@ from questionary import Style
 from rich.text import Text
 import toml
 
-from .utils import get_config_path, make_api_request, parse_error_filepath
+from .cli_utils import get_config_path, make_api_request, parse_error_filepath
 
 app = typer.Typer(
     no_args_is_help=True, help="A local-first AI assistant. For devs, by devs."
