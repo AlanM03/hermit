@@ -148,7 +148,7 @@ def scribe():
     commit_message = response.json().get("commit_message")
 
     coolPrint("\n" + "=" * 50)
-    coolPrint("[bold #A0A0A0]Suggested Commit Message:[/#A0A0A0]")
+    coolPrint("[#A0A0A0]Suggested Commit Message:[/#A0A0A0]")
     coolPrint("=" * 50 + "\n")
     coolPrint(f"[#FFFFFF]{commit_message}[/#FFFFFF]")
     print("\n")
