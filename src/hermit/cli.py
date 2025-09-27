@@ -7,7 +7,7 @@ from questionary import Style
 from rich.text import Text
 import toml
 
-from .utils import get_config_path, make_api_request, parse_error_filepath
+from .cli_utils import get_config_path, make_api_request, parse_error_filepath
 
 app = typer.Typer(
     no_args_is_help=True, help="A local-first AI assistant. For devs, by devs."
@@ -148,7 +148,7 @@ def scribe():
     commit_message = response.json().get("commit_message")
 
     coolPrint("\n" + "=" * 50)
-    coolPrint("[bold #A0A0A0]Suggested Commit Message:[/#A0A0A0]")
+    coolPrint("[#A0A0A0]Suggested Commit Message:[/#A0A0A0]")
     coolPrint("=" * 50 + "\n")
     coolPrint(f"[#FFFFFF]{commit_message}[/#FFFFFF]")
     print("\n")

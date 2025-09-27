@@ -31,14 +31,14 @@ dependencies = [
 ]
 
 [project.scripts]
-hermit = "hermit.cli.main:app"
-hermit-daemon = "hermit.daemon.main:run"
+hermit = "hermit.cli:app"
+hermit-daemon = "hermit.server:run"
 
 [project.optional-dependencies]
 dev = [
     "ruff"
 ]
 
-[tool.setuptools]
-packages = ["hermit", "hermit.cli", "hermit.daemon"]
+[tool.setuptools.packages.find]
+where = ["src"]
 
