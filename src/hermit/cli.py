@@ -4,14 +4,21 @@ import os
 from rich import print as coolPrint
 import questionary
 from questionary import Style
-from rich.text import Text
+from rich.console import Console
 import toml
 
-from .cli_utils import get_config_path, make_api_request, parse_error_filepath
+from .cli_utils import (
+    get_config_path,
+    make_api_request,
+    parse_error_filepath,
+    transcribe_stream,
+    get_themed_phrases,
+)
 
 app = typer.Typer(
     no_args_is_help=True, help="A local-first AI assistant. For devs, by devs."
 )
+console = Console()
 
 
 @app.command(name="invoke", help="Initialize or re-configure Hermit for a project.")
@@ -105,22 +112,14 @@ def invoke():
 def ponder(prompt: str):
     """Hermit ponders on your question and gives its best answer."""
 
-    coolPrint("[#A0A0A0]Pondering...[/#A0A0A0]\n")
-
     payload = {"prompt": prompt, "project_path": os.getcwd()}
-    with make_api_request(
-        endpoint="/hermit/ponder", payload=payload, stream=True
-    ) as response:
-        for chunk in response.iter_content(chunk_size=None, decode_unicode=True):
-            coolPrint(Text(chunk, style="italic #FFFFFF"), end="", flush=True)
+    transcribe_stream(payload, "ponder")
     print("\n")
 
 
 @app.command(name="scribe")
 def scribe():
     """Generates a semantic commit message from staged changes."""
-
-    coolPrint("[#A0A0A0]Getting staged changes...[/#A0A0A0]")
 
     try:
         git_diff_command = ["git", "diff", "--staged"]
@@ -140,12 +139,16 @@ def scribe():
         coolPrint(f"[bold red]Error running git diff:[/bold red]\n{err.stderr}")
         raise typer.Exit(code=1)
 
-    coolPrint("[#A0A0A0]Hermit is scribing...[/#A0A0A0]")
-
     payload = {"diff": staged_diff, "project_path": os.getcwd()}
 
-    response = make_api_request(endpoint="/hermit/scribe", payload=payload)
-    commit_message = response.json().get("commit_message")
+    loading_phrase, completion_phrase = get_themed_phrases()
+
+    # for spinner, can totally make this more consise in a helper later idk how many we will do like this
+    with console.status(loading_phrase, spinner="moon"):
+        response = make_api_request(endpoint="/hermit/scribe", payload=payload)
+
+    coolPrint(completion_phrase)
+    commit_message = response.json().get("response")
 
     coolPrint("\n" + "=" * 50)
     coolPrint("[#A0A0A0]Suggested Commit Message:[/#A0A0A0]")
@@ -223,12 +226,7 @@ def run_and_diagnose(ctx: typer.Context):
             "project_path": os.getcwd(),
         }
 
-        coolPrint("\n[#A0A0A0]Hermit's Diagnosis:[/#A0A0A0]")
-        with make_api_request(
-            endpoint="/hermit/diagnose", payload=payload, stream=True
-        ) as response:
-            for chunk in response.iter_content(chunk_size=None, decode_unicode=True):
-                coolPrint(Text(chunk, style="italic #FFFFFF"), end="", flush=True)
+        transcribe_stream(payload, "diagnose")
         print("\n")
     else:
         coolPrint("Command finished successfully.")
