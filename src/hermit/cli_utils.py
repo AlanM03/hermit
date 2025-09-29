@@ -1,12 +1,42 @@
 import typer
+from rich.console import Console
 import requests
 import os
 import re
 from rich import print as coolPrint
 from pathlib import Path
+from rich.text import Text
 import toml
+import random
 
 API_URL = "http://127.0.0.1:8000"
+console = Console()
+
+
+def get_themed_phrases() -> tuple[str, str]:
+    """Selects a random, corresponding pair of loading and completion phrases."""
+
+    phrase_pairs = [
+        ("Pondering in solitude...", "A thought has emerged."),
+        (
+            "Consulting the ancient scrolls...",
+            "The scrolls have revealed their secrets.",
+        ),
+        ("Brewing a thought...", "The brew is complete."),
+        ("Stoking the embers of an idea...", "The embers glow with an answer."),
+        ("Listening to the silence...", "Silence has spoken."),
+        ("Carving a response...", "The carving is done."),
+        ("Gazing into the abyss...", "The abyss has answered."),
+        ("Translating runic code...", "The runes are clear."),
+        ("Following a thread of logic...", "The thread has led to an answer."),
+        ("Distilling a complex idea...", "The essence has been captured."),
+    ]
+    loading, completion = random.choice(phrase_pairs)
+
+    formatted_loading = f"[#A0A0A0]{loading}[/#A0A0A0]"
+    formatted_completion = f"🌕 [#A0A0A0]{completion}[/#A0A0A0]"
+
+    return formatted_loading, formatted_completion
 
 
 def get_config_path() -> Path:
@@ -30,7 +60,7 @@ def make_api_request(
     """Handles making API requests to the daemon."""
 
     url = f"{API_URL}{endpoint}"
-    timeout = 120 if stream else 60
+    timeout = 180 if stream else 120
 
     try:
         if method.upper() == "POST":
@@ -62,6 +92,25 @@ def make_api_request(
             "[italic #A0A0A0]Is the Hermit daemon running? You can start it with 'hermit-daemon'.[/italic #A0A0A0]"
         )
         raise typer.Exit(code=1)
+
+
+def transcribe_stream(payload: dict, header: str) -> None:
+    """Handles streaming content from LLM aswell as implements loading icons and phrases"""
+
+    loading_phrase, completion_phrase = get_themed_phrases()
+    with console.status(loading_phrase, spinner="moon") as status:
+        with make_api_request(
+            endpoint=f"/hermit/{header}", payload=payload, stream=True
+        ) as response:
+            is_first_chunk = True
+            for chunk in response.iter_content(chunk_size=None, decode_unicode=True):
+                if is_first_chunk:
+                    status.stop()
+                    coolPrint(completion_phrase)
+                    print()
+                    is_first_chunk = False
+                coolPrint(Text(chunk, style="italic #FFFFFF"), end="", flush=True)
+    print()
 
 
 def parse_error_filepath(log: str) -> str | None:

@@ -88,3 +88,17 @@ async def universal_ai_stream(payload: dict, client: openai.OpenAI, model: str):
     except Exception as err:
         logging.error(f"Generic error during AI stream with model {model}: {err}")
         yield f"\n\nError: Could not stream response. Details: {err}"
+
+
+def universal_ai_response(prompt: str, client: openai.OpenAI, model: str) -> dict:
+    try:
+        completion = client.chat.completions.create(
+            model=model, messages=[{"role": "user", "content": prompt}]
+        )
+        response = completion.choices[0].message.content
+        return {"response": response}
+
+    except Exception as err:
+        raise HTTPException(
+            status_code=500, detail=f"Error communicating with AI provider: {err}"
+        )

@@ -9,6 +9,7 @@ from .server_utils import (
     check_config_and_load_client,
     universal_ai_stream,
     get_config_path,
+    universal_ai_response,
 )
 
 from .models import (
@@ -88,20 +89,7 @@ async def ponder(request: PromptRequest):
 async def scribe(request: ScribeRequest):
     config, client = check_config_and_load_client(request.project_path)
     commit_prompt = f"Based on the following git diff, generate a conventional commit message. Only output the commit message itself, with no conversational text.\n\nDiff:\n```diff\n{request.diff}\n```"
-
-    # non streaming call
-    try:
-        response = client.chat.completions.create(
-            model=config.active_model,
-            messages=[{"role": "user", "content": commit_prompt}],
-        )
-        commit_message = response.choices[0].message.content
-        return {"commit_message": commit_message}
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Error communicating with AI provider: {e}"
-        )
+    return universal_ai_response(commit_prompt, client, config.active_model)
 
 
 @app.post("/hermit/diagnose")
