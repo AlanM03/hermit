@@ -15,6 +15,10 @@ class PromptRequest(BaseProjectRequest):
 class ScribeRequest(BaseProjectRequest):
     diff: str
 
+class NewChatRequest(BaseProjectRequest):
+    system_prompt: str
+    chat_name: str
+
 
 class ErrorRequest(BaseProjectRequest):
     error_log: str

@@ -6,6 +6,8 @@ import questionary
 from questionary import Style
 from rich.console import Console
 import toml
+from typing import Optional
+import datetime
 
 from .cli_utils import (
     get_config_path,
@@ -18,8 +20,9 @@ from .cli_utils import (
 app = typer.Typer(
     no_args_is_help=True, help="A local-first AI assistant. For devs, by devs."
 )
+chat_app = typer.Typer(help="Manage and interact with persistent chat sessions.")
+app.add_typer(chat_app, name="chat")
 console = Console()
-
 
 @app.command(name="invoke", help="Initialize or re-configure Hermit for a project.")
 def invoke():
@@ -115,6 +118,20 @@ def ponder(prompt: str):
     payload = {"prompt": prompt, "project_path": os.getcwd()}
     transcribe_stream(payload, "ponder")
     print("\n")
+
+@chat_app.command(name="new")
+def chat_new(session_name: Optional[str] = typer.Argument(None, help="Optional: A name for your new chat session.")):
+    """Hermit lists all conversations and asks you to pick one and you go into an interactive convo """
+
+    final_session_name = ""
+    if session_name:
+        final_session_name = session_name
+    else:
+        now = datetime.datetime.now()
+        final_session_name = now.strftime("%b-%d-at-%I-%M%p")
+
+    payload = {"system_prompt": "You are the goat", "project_path": os.getcwd(), "chat_name": final_session_name}
+    make_api_request(endpoint="/hermit/chat/new", payload=payload)
 
 
 @app.command(name="scribe")

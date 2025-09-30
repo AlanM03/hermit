@@ -10,6 +10,8 @@ from .server_utils import (
     universal_ai_stream,
     get_config_path,
     universal_ai_response,
+    get_chats_path,
+    slugify
 )
 
 from .models import (
@@ -18,6 +20,7 @@ from .models import (
     ProviderModelRequest,
     ScribeRequest,
     ErrorRequest,
+    NewChatRequest
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -72,6 +75,29 @@ async def save_project_config(request: SaveConfigRequest):
     except OSError as err:
         logging.error(f"Failed to save config file at {config_file}: {err}")
         raise HTTPException(status_code=500, detail="Error writing config file.")
+    
+@app.post("/hermit/chat/new")
+async def new_chat(request: NewChatRequest):
+
+    chat_directory = get_chats_path(request.project_path)
+    chat_name = slugify(request.chat_name)
+    file_path = os.path.join(chat_directory, chat_name)
+
+    try:
+        os.makedirs(file_path, exist_ok=True)
+        with open(chat_name, "w", encoding="utf-8") as file:
+            toml.dump(request.config, file)
+        return {"message": "Configuration saved successfully."}
+
+    except OSError as err:
+        logging.error(f"Failed to save config file at {file_path}: {err}")
+        raise HTTPException(status_code=500, detail="Error writing config file.")
+    
+     
+    file_path = os.path.join(chat_directory, chat_name)
+
+
+    logging.error(f"The directory for the files {file_path}")
 
 
 @app.post("/hermit/ponder")
