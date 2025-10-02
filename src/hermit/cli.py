@@ -1,4 +1,5 @@
 import typer
+import json
 import subprocess
 import os
 from rich import print as coolPrint
@@ -15,6 +16,8 @@ from .cli_utils import (
     parse_error_filepath,
     transcribe_stream,
     get_themed_phrases,
+    get_chats_path,
+    slugify,
 )
 
 app = typer.Typer(
@@ -24,11 +27,11 @@ chat_app = typer.Typer(help="Manage and interact with persistent chat sessions."
 app.add_typer(chat_app, name="chat")
 console = Console()
 
+
 @app.command(name="invoke", help="Initialize or re-configure Hermit for a project.")
 def invoke():
     """A multi-step wizard to configure the AI provider and model."""
 
-    project_path = os.getcwd()
     config_path = get_config_path()
 
     # might change later just hardcoding the providers basically
@@ -103,12 +106,20 @@ def invoke():
     config["active_provider"] = selected_provider_name
     config["active_model"] = selected_model
 
-    save_payload = {"project_path": project_path, "config": config}
-    make_api_request("/hermit/config/save", payload=save_payload)
+    try:
+        os.makedirs(os.path.dirname(config_path), exist_ok=True)
+        with open(config_path, "w", encoding="utf-8") as file:
+            toml.dump(config, file)
 
-    coolPrint(
-        f"\n[#DCDCDC]Success![/#DCDCDC] [#A0A0A0]Hermit is now configured to use[/#A0A0A0] [bold #FFFFFF]{selected_model}[/bold #FFFFFF] [#A0A0A0]via[/#A0A0A0] [bold #FFFFFF]{selected_provider_name}[/bold #FFFFFF][#A0A0A0].[/#A0A0A0]"
-    )
+        coolPrint(
+            f"\n[#DCDCDC]Success![/#DCDCDC] [#A0A0A0]Hermit is now configured to use[/#A0A0A0] [bold #FFFFFF]{selected_model}[/bold #FFFFFF] [#A0A0A0]via[/#A0A0A0] [bold #FFFFFF]{selected_provider_name}[/bold #FFFFFF][#A0A0A0].[/#A0A0A0]"
+        )
+
+    except OSError as err:
+        coolPrint(
+            f"[bold red]Error[/bold red] [#DCDCDC]saving configuration file:[/#DCDCDC] [bold red]{err}[/bold red]"
+        )
+        raise typer.Exit(code=1)
 
 
 @app.command(name="ponder")
@@ -119,9 +130,14 @@ def ponder(prompt: str):
     transcribe_stream(payload, "ponder")
     print("\n")
 
+
 @chat_app.command(name="new")
-def chat_new(session_name: Optional[str] = typer.Argument(None, help="Optional: A name for your new chat session.")):
-    """Hermit lists all conversations and asks you to pick one and you go into an interactive convo """
+def chat_new(
+    session_name: Optional[str] = typer.Argument(
+        None, help="Optional: A name for your new chat session."
+    ),
+):
+    """Hermit lists all conversations and asks you to pick one and you go into an interactive convo"""
 
     final_session_name = ""
     if session_name:
@@ -130,8 +146,26 @@ def chat_new(session_name: Optional[str] = typer.Argument(None, help="Optional: 
         now = datetime.datetime.now()
         final_session_name = now.strftime("%b-%d-at-%I-%M%p")
 
-    payload = {"system_prompt": "You are the goat", "project_path": os.getcwd(), "chat_name": final_session_name}
-    make_api_request(endpoint="/hermit/chat/new", payload=payload)
+    chat_directory = get_chats_path()
+    chat_name = slugify(final_session_name)
+    file_path = os.path.join(chat_directory, chat_name)
+
+    data = {
+        "role": "system",
+        "content": """You are Hermit, a local AI assistant. Your persona is that of a wise, solitary sage. Your answers should always be concise, direct, and helpful. For coding tasks, provide clear solutions. For philosophical or creative questions, answer very briefly and your tone can be more enigmatic and thoughtful.""",
+    }
+
+    try:
+        json_line = json.dumps(data)
+        os.makedirs(chat_directory, exist_ok=True)
+        with open(file_path, "a", encoding="utf-8") as file:
+            file.write(json_line + "\n")
+
+    except OSError as err:
+        coolPrint(
+            f"[bold red]Failed[/bold red] [#DCDCDC]to save config file at: [/#DCDCDC] [#A0A0A0]{file_path}[/#A0A0A0][#DCDCDC]:[/#DCDCDC] [bold red]{err}[/bold red]"
+        )
+        raise typer.Exit(code=1)
 
 
 @app.command(name="scribe")

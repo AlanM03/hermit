@@ -45,6 +45,23 @@ def get_config_path() -> Path:
     return Path(os.getcwd()) / ".hermit" / "config.toml"
 
 
+def get_chats_path() -> Path:
+    return Path(os.getcwd()) / ".hermit" / "chats"
+
+
+def slugify(text: str) -> str:
+    """Converts a string into a URL-friendly slug."""
+    text = text.strip().lower()
+
+    # Replace spaces and repeated hyphens with a single hyphen
+    text = re.sub(r"[\s-]+", "-", text)
+
+    # Remove characters that are not alphanumeric or a hyphen
+    text = re.sub(r"[^a-z0-9-]", "", text)
+
+    return text + ".json"
+
+
 def load_config() -> dict:
     """Loads the project config if it exists, otherwise returns a default."""
 

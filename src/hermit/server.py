@@ -1,26 +1,19 @@
-import toml
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 import logging
-import os
 import httpx
 
 from .server_utils import (
     check_config_and_load_client,
     universal_ai_stream,
-    get_config_path,
     universal_ai_response,
-    get_chats_path,
-    slugify
 )
 
 from .models import (
     PromptRequest,
-    SaveConfigRequest,
     ProviderModelRequest,
     ScribeRequest,
     ErrorRequest,
-    NewChatRequest
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -59,45 +52,6 @@ async def get_models_for_provider(request: ProviderModelRequest):
             status_code=500,
             detail="Received an unexpected or invalid response from the provider.",
         )
-
-
-@app.post("/hermit/config/save")
-async def save_project_config(request: SaveConfigRequest):
-    config_file = get_config_path(request.project_path)
-    config_dir = os.path.dirname(config_file)
-
-    try:
-        os.makedirs(config_dir, exist_ok=True)
-        with open(config_file, "w", encoding="utf-8") as file:
-            toml.dump(request.config, file)
-        return {"message": "Configuration saved successfully."}
-
-    except OSError as err:
-        logging.error(f"Failed to save config file at {config_file}: {err}")
-        raise HTTPException(status_code=500, detail="Error writing config file.")
-    
-@app.post("/hermit/chat/new")
-async def new_chat(request: NewChatRequest):
-
-    chat_directory = get_chats_path(request.project_path)
-    chat_name = slugify(request.chat_name)
-    file_path = os.path.join(chat_directory, chat_name)
-
-    try:
-        os.makedirs(file_path, exist_ok=True)
-        with open(chat_name, "w", encoding="utf-8") as file:
-            toml.dump(request.config, file)
-        return {"message": "Configuration saved successfully."}
-
-    except OSError as err:
-        logging.error(f"Failed to save config file at {file_path}: {err}")
-        raise HTTPException(status_code=500, detail="Error writing config file.")
-    
-     
-    file_path = os.path.join(chat_directory, chat_name)
-
-
-    logging.error(f"The directory for the files {file_path}")
 
 
 @app.post("/hermit/ponder")

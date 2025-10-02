@@ -1,5 +1,4 @@
 import os
-import re
 import toml
 import openai
 import logging
@@ -29,20 +28,6 @@ def load_config(project_path: str) -> Optional[Config]:
 
     return None
 
-def get_chats_path(project_path: str) -> str:
-    return os.path.join(project_path, ".hermit", "chats")
-
-def slugify(text: str) -> str:
-    """Converts a string into a URL-friendly slug."""
-    text = text.strip().lower()
-
-    #Replace spaces and repeated hyphens with a single hyphen
-    text = re.sub(r'[\s-]+', '-', text)
-
-    #Remove characters that are not alphanumeric or a hyphen
-    text = re.sub(r'[^a-z0-9-]', '', text)
-
-    return text
 
 def get_configured_ai_client(config: Config) -> openai.OpenAI:
     provider = next(
