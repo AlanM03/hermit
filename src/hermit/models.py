@@ -8,11 +8,15 @@ class BaseProjectRequest(BaseModel):
     )
 
 
-class PromptRequest(BaseProjectRequest):
+class PromptRequest(BaseProjectRequest):  # to be changed or removed
     prompt: str
 
 
-class ScribeRequest(BaseProjectRequest):
+class ChatRequest(BaseProjectRequest):  # for persistant memory
+    messages: List[dict]
+
+
+class ScribeRequest(BaseProjectRequest):  # to be changed or removed
     diff: str
 
 

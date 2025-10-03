@@ -66,7 +66,35 @@ def check_config_and_load_client(project_path: str) -> tuple[Config, openai.Open
     return (config, get_configured_ai_client(config))
 
 
-async def universal_ai_stream(payload: dict, client: openai.OpenAI, model: str):
+async def universal_ai_stream_with_context(
+    payload: dict, client: openai.OpenAI, model: str
+):
+    try:
+        stream = client.chat.completions.create(
+            model=model,
+            messages=payload["messages"],
+            stream=True,
+        )
+
+        for chunk in stream:
+            content = chunk.choices[0].delta.content
+            if content is not None:
+                yield content
+
+    except openai.APIStatusError as err:
+        logging.error(
+            f"Provider API Error: Status {err.status_code} - {err.response.text}"
+        )
+        yield f"\n\nError communicating with the AI provider.\nDetails: The model '{model}' may not exist or the provider returned an error (Status Code: {err.status_code})."
+
+    except Exception as err:
+        logging.error(f"Generic error during AI stream with model {model}: {err}")
+        yield f"\n\nError: Could not stream response. Details: {err}"
+
+
+async def universal_ai_stream(
+    payload: dict, client: openai.OpenAI, model: str
+):  # <--- to be changed
     try:
         messages = [
             {

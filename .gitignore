@@ -9,6 +9,9 @@ __pycache__/
 #personal txt files
 commands.txt
 
+#chats for user
+.hermit/chats
+
 # Distribution / packaging
 .Python
 build/

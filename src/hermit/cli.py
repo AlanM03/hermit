@@ -9,6 +9,7 @@ from rich.console import Console
 import toml
 from typing import Optional
 import datetime
+from pathlib import Path
 
 from .cli_utils import (
     get_config_path,
@@ -18,6 +19,8 @@ from .cli_utils import (
     get_themed_phrases,
     get_chats_path,
     slugify,
+    save_chat,
+    run_chat_loop,
 )
 
 app = typer.Typer(
@@ -77,6 +80,7 @@ def invoke():
     if not selected_provider_name:
         raise typer.Exit()
 
+    # can change this later
     selected_provider = next(
         provider for provider in providers if provider["name"] == selected_provider_name
     )
@@ -137,7 +141,7 @@ def chat_new(
         None, help="Optional: A name for your new chat session."
     ),
 ):
-    """Hermit lists all conversations and asks you to pick one and you go into an interactive convo"""
+    """Hermit makes a new convo with you"""
 
     final_session_name = ""
     if session_name:
@@ -153,19 +157,52 @@ def chat_new(
     data = {
         "role": "system",
         "content": """You are Hermit, a local AI assistant. Your persona is that of a wise, solitary sage. Your answers should always be concise, direct, and helpful. For coding tasks, provide clear solutions. For philosophical or creative questions, answer very briefly and your tone can be more enigmatic and thoughtful.""",
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
     }
 
-    try:
-        json_line = json.dumps(data)
-        os.makedirs(chat_directory, exist_ok=True)
-        with open(file_path, "a", encoding="utf-8") as file:
-            file.write(json_line + "\n")
+    save_chat(file_path, data)
+    run_chat_loop(file_path, [data])
 
-    except OSError as err:
-        coolPrint(
-            f"[bold red]Failed[/bold red] [#DCDCDC]to save config file at: [/#DCDCDC] [#A0A0A0]{file_path}[/#A0A0A0][#DCDCDC]:[/#DCDCDC] [bold red]{err}[/bold red]"
-        )
-        raise typer.Exit(code=1)
+
+@chat_app.command(name="recall")
+def chat_recall():
+    """Hermit lists all conversations and asks you to pick one and you go into an interactive convo"""
+
+    chat_directory = get_chats_path()
+    chat_names = os.listdir(chat_directory)
+
+    hermit_style = Style(
+        [
+            ("question", "fg:#A0A0A0"),
+            ("answer", "fg:#FFFFFF bold"),
+            ("instruction", "fg:#A0A0A0"),
+            ("text", "fg:#FFFFFF"),
+            ("completion-menu.completion", "bg:#2C2C2C fg:#A0A0A0"),
+            ("completion-menu.completion.current", "bg:#FFFFFF fg:#1C1C1C"),
+            ("completion-menu.scrollbar.arrow", "fg:#FFFFFF"),
+        ]
+    )
+
+    selected_session = questionary.autocomplete(
+        "Which chat session would you like to recall? (Start typing to filter)",
+        choices=chat_names,
+        validate_while_typing=False,
+        style=hermit_style,
+    ).ask()
+
+    target_file = os.path.join(chat_directory, selected_session)
+    history = []
+
+    if Path(target_file).exists():
+        with open(target_file, "r", encoding="utf-8") as f:
+            for line in f:
+                try:
+                    history.append(json.loads(line))
+                except json.JSONDecodeError:
+                    coolPrint(
+                        f"[bold yellow]Warning: Skipping malformed line in {selected_session}.jsonl[/bold yellow]"
+                    )
+    run_chat_loop(target_file, history)
 
 
 @app.command(name="scribe")

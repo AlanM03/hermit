@@ -2,12 +2,14 @@ import typer
 from rich.console import Console
 import requests
 import os
+import json
 import re
 from rich import print as coolPrint
 from pathlib import Path
 from rich.text import Text
 import toml
 import random
+import datetime
 
 API_URL = "http://127.0.0.1:8000"
 console = Console()
@@ -111,9 +113,10 @@ def make_api_request(
         raise typer.Exit(code=1)
 
 
-def transcribe_stream(payload: dict, header: str) -> None:
+def transcribe_stream(payload: dict, header: str) -> str:
     """Handles streaming content from LLM aswell as implements loading icons and phrases"""
 
+    full_response = ""
     loading_phrase, completion_phrase = get_themed_phrases()
     with console.status(loading_phrase, spinner="moon") as status:
         with make_api_request(
@@ -127,7 +130,9 @@ def transcribe_stream(payload: dict, header: str) -> None:
                     print()
                     is_first_chunk = False
                 coolPrint(Text(chunk, style="italic #FFFFFF"), end="", flush=True)
+                full_response += chunk
     print()
+    return full_response
 
 
 def parse_error_filepath(log: str) -> str | None:
@@ -139,3 +144,49 @@ def parse_error_filepath(log: str) -> str | None:
         if matches:
             return matches[-1].strip()
     return None
+
+
+def save_chat(file_path: str, data: dict):
+    """Appends a single turn (user or assistant message) to the history file."""
+    chat_directory = os.path.dirname(file_path)
+
+    try:
+        json_line = json.dumps(data)
+        os.makedirs(chat_directory, exist_ok=True)
+        with open(file_path, "a", encoding="utf-8") as file:
+            file.write(json_line + "\n")
+
+    except OSError as err:
+        coolPrint(
+            f"[bold red]Failed[/bold red] [#DCDCDC]to save to chat file at: [/#DCDCDC] [#A0A0A0]{file_path}[/#A0A0A0][#DCDCDC]:[/#DCDCDC] [bold red]{err}[/bold red]"
+        )
+        raise typer.Exit(code=1)
+
+
+def run_chat_loop(file_path: str, history: list):
+    """The main interactive chat loop that handles the conversation."""
+
+    coolPrint(
+        f"🧙 Chatting in session: [bold #FFFFFF]{os.path.basename(file_path)}[/bold #FFFFFF]. Type '/bye' to exit."
+    )
+
+    while True:
+        prompt = typer.prompt(">", default="").strip()
+
+        if prompt.lower() == "/bye":
+            coolPrint("\n[italic #A0A0A0]Farewell[/italic #A0A0A0]\n")
+            break
+
+        if not prompt:
+            continue
+
+        user_turn = {"role": "user", "content": prompt, "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()}
+        history.append(user_turn)
+        save_chat(file_path, user_turn)
+
+        payload = {"messages": history, "project_path": os.getcwd()}
+
+        ai_response = transcribe_stream(payload, "chat")
+        ai_turn = {"role": "assistant", "content": ai_response, "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()}
+        history.append(ai_turn)
+        save_chat(file_path, ai_turn)

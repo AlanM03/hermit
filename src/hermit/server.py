@@ -7,6 +7,7 @@ from .server_utils import (
     check_config_and_load_client,
     universal_ai_stream,
     universal_ai_response,
+    universal_ai_stream_with_context,
 )
 
 from .models import (
@@ -14,6 +15,7 @@ from .models import (
     ProviderModelRequest,
     ScribeRequest,
     ErrorRequest,
+    ChatRequest,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -61,6 +63,17 @@ async def ponder(request: PromptRequest):
 
     return StreamingResponse(
         universal_ai_stream(payload, client, config.active_model),
+        media_type="text/plain",
+    )
+
+
+@app.post("/hermit/chat")
+async def chat(request: ChatRequest):
+    config, client = check_config_and_load_client(request.project_path)
+    payload = request.model_dump()
+
+    return StreamingResponse(
+        universal_ai_stream_with_context(payload, client, config.active_model),
         media_type="text/plain",
     )
 
