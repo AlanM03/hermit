@@ -180,13 +180,21 @@ def run_chat_loop(file_path: str, history: list):
         if not prompt:
             continue
 
-        user_turn = {"role": "user", "content": prompt, "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()}
+        user_turn = {
+            "role": "user",
+            "content": prompt,
+            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        }
         history.append(user_turn)
         save_chat(file_path, user_turn)
 
         payload = {"messages": history, "project_path": os.getcwd()}
 
         ai_response = transcribe_stream(payload, "chat")
-        ai_turn = {"role": "assistant", "content": ai_response, "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()}
+        ai_turn = {
+            "role": "assistant",
+            "content": ai_response,
+            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        }
         history.append(ai_turn)
         save_chat(file_path, ai_turn)
