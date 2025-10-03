@@ -1,23 +1,21 @@
-import toml
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 import logging
-import os
 import httpx
 
 from .server_utils import (
     check_config_and_load_client,
     universal_ai_stream,
-    get_config_path,
     universal_ai_response,
+    universal_ai_stream_with_context,
 )
 
 from .models import (
     PromptRequest,
-    SaveConfigRequest,
     ProviderModelRequest,
     ScribeRequest,
     ErrorRequest,
+    ChatRequest,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -58,22 +56,6 @@ async def get_models_for_provider(request: ProviderModelRequest):
         )
 
 
-@app.post("/hermit/config/save")
-async def save_project_config(request: SaveConfigRequest):
-    config_file = get_config_path(request.project_path)
-    config_dir = os.path.dirname(config_file)
-
-    try:
-        os.makedirs(config_dir, exist_ok=True)
-        with open(config_file, "w", encoding="utf-8") as file:
-            toml.dump(request.config, file)
-        return {"message": "Configuration saved successfully."}
-
-    except OSError as err:
-        logging.error(f"Failed to save config file at {config_file}: {err}")
-        raise HTTPException(status_code=500, detail="Error writing config file.")
-
-
 @app.post("/hermit/ponder")
 async def ponder(request: PromptRequest):
     config, client = check_config_and_load_client(request.project_path)
@@ -81,6 +63,17 @@ async def ponder(request: PromptRequest):
 
     return StreamingResponse(
         universal_ai_stream(payload, client, config.active_model),
+        media_type="text/plain",
+    )
+
+
+@app.post("/hermit/chat")
+async def chat(request: ChatRequest):
+    config, client = check_config_and_load_client(request.project_path)
+    payload = request.model_dump()
+
+    return StreamingResponse(
+        universal_ai_stream_with_context(payload, client, config.active_model),
         media_type="text/plain",
     )
 

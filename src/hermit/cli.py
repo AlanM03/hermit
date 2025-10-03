@@ -1,4 +1,5 @@
 import typer
+import json
 import subprocess
 import os
 from rich import print as coolPrint
@@ -6,6 +7,9 @@ import questionary
 from questionary import Style
 from rich.console import Console
 import toml
+from typing import Optional
+import datetime
+from pathlib import Path
 
 from .cli_utils import (
     get_config_path,
@@ -13,11 +17,17 @@ from .cli_utils import (
     parse_error_filepath,
     transcribe_stream,
     get_themed_phrases,
+    get_chats_path,
+    slugify,
+    save_chat,
+    run_chat_loop,
 )
 
 app = typer.Typer(
     no_args_is_help=True, help="A local-first AI assistant. For devs, by devs."
 )
+chat_app = typer.Typer(help="Manage and interact with persistent chat sessions.")
+app.add_typer(chat_app, name="chat")
 console = Console()
 
 
@@ -25,7 +35,6 @@ console = Console()
 def invoke():
     """A multi-step wizard to configure the AI provider and model."""
 
-    project_path = os.getcwd()
     config_path = get_config_path()
 
     # might change later just hardcoding the providers basically
@@ -71,6 +80,7 @@ def invoke():
     if not selected_provider_name:
         raise typer.Exit()
 
+    # can change this later
     selected_provider = next(
         provider for provider in providers if provider["name"] == selected_provider_name
     )
@@ -100,12 +110,20 @@ def invoke():
     config["active_provider"] = selected_provider_name
     config["active_model"] = selected_model
 
-    save_payload = {"project_path": project_path, "config": config}
-    make_api_request("/hermit/config/save", payload=save_payload)
+    try:
+        os.makedirs(os.path.dirname(config_path), exist_ok=True)
+        with open(config_path, "w", encoding="utf-8") as file:
+            toml.dump(config, file)
 
-    coolPrint(
-        f"\n[#DCDCDC]Success![/#DCDCDC] [#A0A0A0]Hermit is now configured to use[/#A0A0A0] [bold #FFFFFF]{selected_model}[/bold #FFFFFF] [#A0A0A0]via[/#A0A0A0] [bold #FFFFFF]{selected_provider_name}[/bold #FFFFFF][#A0A0A0].[/#A0A0A0]"
-    )
+        coolPrint(
+            f"\n[#DCDCDC]Success![/#DCDCDC] [#A0A0A0]Hermit is now configured to use[/#A0A0A0] [bold #FFFFFF]{selected_model}[/bold #FFFFFF] [#A0A0A0]via[/#A0A0A0] [bold #FFFFFF]{selected_provider_name}[/bold #FFFFFF][#A0A0A0].[/#A0A0A0]"
+        )
+
+    except OSError as err:
+        coolPrint(
+            f"[bold red]Error[/bold red] [#DCDCDC]saving configuration file:[/#DCDCDC] [bold red]{err}[/bold red]"
+        )
+        raise typer.Exit(code=1)
 
 
 @app.command(name="ponder")
@@ -115,6 +133,76 @@ def ponder(prompt: str):
     payload = {"prompt": prompt, "project_path": os.getcwd()}
     transcribe_stream(payload, "ponder")
     print("\n")
+
+
+@chat_app.command(name="new")
+def chat_new(
+    session_name: Optional[str] = typer.Argument(
+        None, help="Optional: A name for your new chat session."
+    ),
+):
+    """Hermit makes a new convo with you"""
+
+    final_session_name = ""
+    if session_name:
+        final_session_name = session_name
+    else:
+        now = datetime.datetime.now()
+        final_session_name = now.strftime("%b-%d-at-%I-%M%p")
+
+    chat_directory = get_chats_path()
+    chat_name = slugify(final_session_name)
+    file_path = os.path.join(chat_directory, chat_name)
+
+    data = {
+        "role": "system",
+        "content": """You are Hermit, a local AI assistant. Your persona is that of a wise, solitary sage. Your answers should always be concise, direct, and helpful. For coding tasks, provide clear solutions. For philosophical or creative questions, answer very briefly and your tone can be more enigmatic and thoughtful.""",
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    }
+
+    save_chat(file_path, data)
+    run_chat_loop(file_path, [data])
+
+
+@chat_app.command(name="recall")
+def chat_recall():
+    """Hermit lists all conversations and asks you to pick one and you go into an interactive convo"""
+
+    chat_directory = get_chats_path()
+    chat_names = os.listdir(chat_directory)
+
+    hermit_style = Style(
+        [
+            ("question", "fg:#A0A0A0"),
+            ("answer", "fg:#FFFFFF bold"),
+            ("instruction", "fg:#A0A0A0"),
+            ("text", "fg:#FFFFFF"),
+            ("completion-menu.completion", "bg:#2C2C2C fg:#A0A0A0"),
+            ("completion-menu.completion.current", "bg:#FFFFFF fg:#1C1C1C"),
+            ("completion-menu.scrollbar.arrow", "fg:#FFFFFF"),
+        ]
+    )
+
+    selected_session = questionary.autocomplete(
+        "Which chat session would you like to recall? (Start typing to filter)",
+        choices=chat_names,
+        validate_while_typing=False,
+        style=hermit_style,
+    ).ask()
+
+    target_file = os.path.join(chat_directory, selected_session)
+    history = []
+
+    if Path(target_file).exists():
+        with open(target_file, "r", encoding="utf-8") as f:
+            for line in f:
+                try:
+                    history.append(json.loads(line))
+                except json.JSONDecodeError:
+                    coolPrint(
+                        f"[bold yellow]Warning: Skipping malformed line in {selected_session}.jsonl[/bold yellow]"
+                    )
+    run_chat_loop(target_file, history)
 
 
 @app.command(name="scribe")
