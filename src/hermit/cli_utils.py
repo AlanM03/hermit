@@ -10,6 +10,7 @@ from rich.text import Text
 import toml
 import random
 import datetime
+from localgrid import get_context_limit, count_tokens
 
 API_URL = "http://127.0.0.1:8000"
 console = Console()
@@ -166,9 +167,18 @@ def save_chat(file_path: str, data: dict):
 def run_chat_loop(file_path: str, history: list):
     """The main interactive chat loop that handles the conversation."""
 
+    try:
+        config = load_config()
+    except:
+        raise typer.Exit(code=1)
+    
+    total_tokens = sum(count_tokens(msg["content"], config['active_model']) for msg in history)
+    context_limit = get_context_limit(config['active_model'])
+
     coolPrint(
         f"🧙 Chatting in session: [bold #FFFFFF]{os.path.basename(file_path)}[/bold #FFFFFF]. Type '/bye' to exit."
     )
+    coolPrint(f"Model in use: [bold #FFFFFF]{config['active_model']}[/bold #FFFFFF]")
 
     while True:
         prompt = typer.prompt(">", default="").strip()
@@ -201,3 +211,10 @@ def run_chat_loop(file_path: str, history: list):
 
         ai_turn["timestamp"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
         save_chat(file_path, ai_turn)
+
+        ai_tokens = count_tokens(ai_response, config['active_model'])
+        total_tokens += ai_tokens
+        
+        coolPrint(f"Context: [bold #FFFFFF]{total_tokens}/{context_limit}[/bold #FFFFFF] tokens")
+
+

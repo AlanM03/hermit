@@ -2,6 +2,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 import logging
 import httpx
+from contextlib import asynccontextmanager
+from localgrid import preload_tokenizers
 
 from .server_utils import (
     check_config_and_load_client,
@@ -20,8 +22,13 @@ from .models import (
 
 logging.basicConfig(level=logging.INFO)
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("Preloading tokenizers...")
+    await preload_tokenizers()  
+    yield
 
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 
 
 @app.post("/hermit/provider/models")
@@ -77,6 +84,12 @@ async def chat(request: ChatRequest):
         media_type="text/plain",
     )
 
+@app.post("/hermit/summarize")
+async def summarize(request: ChatRequest):
+    config, client = check_config_and_load_client(request.project_path)
+    prompt = f"Please summarize the following conversation accurately and concisely."
+
+    return universal_ai_response(prompt,client, config.active_model)
 
 @app.post("/hermit/scribe")
 async def scribe(request: ScribeRequest):
