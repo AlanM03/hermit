@@ -74,6 +74,7 @@ async def universal_ai_stream_with_context(
             model=model,
             messages=payload["messages"],
             stream=True,
+            stream_options={"include_usage": False}
         )
 
         for chunk in stream:
@@ -125,9 +126,9 @@ async def universal_ai_stream(
         yield f"\n\nError: Could not stream response. Details: {err}"
 
 
-def universal_ai_response(prompt: str, client: openai.OpenAI, model: str) -> dict:
+async def universal_ai_response(prompt: str, client: openai.AsyncOpenAI, model: str) -> dict:
     try:
-        completion = client.chat.completions.create(
+        completion = await client.chat.completions.create(
             model=model, messages=[{"role": "user", "content": prompt}]
         )
         response = completion.choices[0].message.content

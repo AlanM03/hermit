@@ -82,14 +82,16 @@ async def chat(request: ChatRequest):
     return StreamingResponse(
         universal_ai_stream_with_context(payload, client, config.active_model),
         media_type="text/plain",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        }
     )
 
 @app.post("/hermit/summarize")
 async def summarize(request: ChatRequest):
     config, client = check_config_and_load_client(request.project_path)
-    prompt = f"Please summarize the following conversation accurately and concisely."
-
-    return universal_ai_response(prompt,client, config.active_model)
+    return universal_ai_response(request.messages, client, config.active_model)
 
 @app.post("/hermit/scribe")
 async def scribe(request: ScribeRequest):
