@@ -197,7 +197,13 @@ def chat_recall():
         with open(target_file, "r", encoding="utf-8") as f:
             for line in f:
                 try:
-                    history.append(json.loads(line))
+                    base = json.loads(line)
+                    optimized_line = {
+                        "role": base["role"],
+                        "content": base["content"]
+                    }
+                    
+                    history.append(optimized_line)
                 except json.JSONDecodeError:
                     coolPrint(
                         f"[bold yellow]Warning: Skipping malformed line in {selected_session}.jsonl[/bold yellow]"

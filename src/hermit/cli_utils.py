@@ -182,10 +182,11 @@ def run_chat_loop(file_path: str, history: list):
 
         user_turn = {
             "role": "user",
-            "content": prompt,
-            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "content": prompt
         }
         history.append(user_turn)
+
+        user_turn["timestamp"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
         save_chat(file_path, user_turn)
 
         payload = {"messages": history, "project_path": os.getcwd()}
@@ -193,8 +194,10 @@ def run_chat_loop(file_path: str, history: list):
         ai_response = transcribe_stream(payload, "chat")
         ai_turn = {
             "role": "assistant",
-            "content": ai_response,
-            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "content": ai_response
         }
+
         history.append(ai_turn)
+
+        ai_turn["timestamp"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
         save_chat(file_path, ai_turn)

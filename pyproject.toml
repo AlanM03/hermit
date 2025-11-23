@@ -28,6 +28,7 @@ dependencies = [
     "httpx",
     "ollama",
     "chromadb",
+    "localgrid"
 ]
 
 [project.scripts]

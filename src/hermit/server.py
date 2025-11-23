@@ -109,3 +109,8 @@ async def diagnose(request: ErrorRequest):
         universal_ai_stream(payload, client, config.active_model),
         media_type="text/plain",
     )
+
+def run():
+    """Entry point for hermit-daemon command."""
+    import uvicorn
+    uvicorn.run(app, host="127.0.0.1", port=8000)
