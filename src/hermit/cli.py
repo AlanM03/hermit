@@ -198,11 +198,8 @@ def chat_recall():
             for line in f:
                 try:
                     base = json.loads(line)
-                    optimized_line = {
-                        "role": base["role"],
-                        "content": base["content"]
-                    }
-                    
+                    optimized_line = {"role": base["role"], "content": base["content"]}
+
                     history.append(optimized_line)
                 except json.JSONDecodeError:
                     coolPrint(

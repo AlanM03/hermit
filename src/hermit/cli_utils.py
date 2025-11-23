@@ -26,7 +26,10 @@ def get_themed_phrases() -> tuple[str, str]:
 
     phrase_pairs = [
         ("Pondering in solitude...", "A thought has emerged."),
-        ("Consulting the ancient scrolls...", "The scrolls have revealed their secrets."),
+        (
+            "Consulting the ancient scrolls...",
+            "The scrolls have revealed their secrets.",
+        ),
         ("Brewing a thought...", "The brew is complete."),
         ("Stoking the embers of an idea...", "The embers glow with an answer."),
         ("Listening to the silence...", "Silence has spoken."),
@@ -76,21 +79,25 @@ def load_config() -> dict:
     return {}
 
 
-def _make_request(endpoint: str, payload: dict = None, method: str = "POST", timeout: int = 120):
+def _make_request(
+    endpoint: str, payload: dict = None, method: str = "POST", timeout: int = 120
+):
     """Internal function to make HTTP requests"""
     url = f"{API_URL}{endpoint}"
-    
+
     try:
         if method.upper() == "POST":
             response = requests.post(url, json=payload, timeout=timeout)
         else:
             response = requests.get(url, timeout=timeout)
-        
+
         response.raise_for_status()
         return response
-        
+
     except requests.exceptions.HTTPError as err:
-        coolPrint(f"[bold red]Error from Hermit Daemon (Status Code: {err.response.status_code}):[/bold red]")
+        coolPrint(
+            f"[bold red]Error from Hermit Daemon (Status Code: {err.response.status_code}):[/bold red]"
+        )
         try:
             detail = err.response.json().get("detail", err.response.text)
         except requests.exceptions.JSONDecodeError:
@@ -99,37 +106,49 @@ def _make_request(endpoint: str, payload: dict = None, method: str = "POST", tim
         raise typer.Exit(code=1)
 
     except requests.exceptions.RequestException as err:
-        coolPrint(f"[bold red]Error connecting to Hermit Daemon:[/bold red] [#A0A0A0]{err}[/#A0A0A0]")
-        coolPrint("[italic #A0A0A0]Is the Hermit daemon running? You can start it with 'hermit-daemon'.[/italic #A0A0A0]")
+        coolPrint(
+            f"[bold red]Error connecting to Hermit Daemon:[/bold red] [#A0A0A0]{err}[/#A0A0A0]"
+        )
+        coolPrint(
+            "[italic #A0A0A0]Is the Hermit daemon running? You can start it with 'hermit-daemon'.[/italic #A0A0A0]"
+        )
         raise typer.Exit(code=1)
 
 
-async def _make_request_async(endpoint: str, payload: dict = None, method: str = "POST", timeout: int = 120):
+async def _make_request_async(
+    endpoint: str, payload: dict = None, method: str = "POST", timeout: int = 120
+):
     """Internal async function to make HTTP requests"""
     url = f"{API_URL}{endpoint}"
-    
+
     try:
         async with httpx.AsyncClient() as client:
             if method.upper() == "POST":
                 response = await client.post(url, json=payload, timeout=timeout)
             else:
                 response = await client.get(url, timeout=timeout)
-            
+
             response.raise_for_status()
             return response
-        
+
     except httpx.HTTPStatusError as err:
-        coolPrint(f"[bold red]Error from Hermit Daemon (Status Code: {err.response.status_code}):[/bold red]")
+        coolPrint(
+            f"[bold red]Error from Hermit Daemon (Status Code: {err.response.status_code}):[/bold red]"
+        )
         try:
             detail = err.response.json().get("detail", err.response.text)
-        except:
+        except (json.JSONDecodeError, ValueError, AttributeError):
             detail = err.response.text
         coolPrint(f"[italic #A0A0A0]{detail}[/italic #A0A0A0]")
         raise typer.Exit(code=1)
 
     except httpx.RequestError as err:
-        coolPrint(f"[bold red]Error connecting to Hermit Daemon:[/bold red] [#A0A0A0]{err}[/#A0A0A0]")
-        coolPrint("[italic #A0A0A0]Is the Hermit daemon running? You can start it with 'hermit-daemon'.[/italic #A0A0A0]")
+        coolPrint(
+            f"[bold red]Error connecting to Hermit Daemon:[/bold red] [#A0A0A0]{err}[/#A0A0A0]"
+        )
+        coolPrint(
+            "[italic #A0A0A0]Is the Hermit daemon running? You can start it with 'hermit-daemon'.[/italic #A0A0A0]"
+        )
         raise typer.Exit(code=1)
 
 
@@ -140,7 +159,9 @@ def make_api_request(endpoint: str, payload: dict = None, method: str = "POST"):
 
 
 # For non-streaming requests (async)
-async def make_api_request_async(endpoint: str, payload: dict = None, method: str = "POST"):
+async def make_api_request_async(
+    endpoint: str, payload: dict = None, method: str = "POST"
+):
     """Make an async API request (non-streaming)"""
     return await _make_request_async(endpoint, payload, method, timeout=120)
 
@@ -161,30 +182,30 @@ def transcribe_stream(payload: dict, header: str) -> str:
 
     full_response = ""
     loading_phrase, completion_phrase = get_themed_phrases()
-    
+
     with console.status(loading_phrase, spinner="moon") as status:
         with make_streaming_request(
-            endpoint=f"/hermit/{header}", 
-            payload=payload, 
+            endpoint=f"/hermit/{header}",
+            payload=payload,
         ) as response:
             is_first_chunk = True
-            
+
             for chunk in response.iter_content(chunk_size=1, decode_unicode=True):
                 if not chunk:
                     continue
-                
+
                 if is_first_chunk:
                     status.stop()
                     coolPrint(completion_phrase)
                     print()
                     is_first_chunk = False
-                
+
                 styled_chunk = Text(chunk, style="italic #FFFFFF")
                 console.print(styled_chunk, end="")
-                console.file.flush()  
+                console.file.flush()
                 time.sleep(0.002)
                 full_response += chunk
-            
+
     print()
     return full_response
 
@@ -221,11 +242,14 @@ def run_chat_loop(file_path: str, history: list):
 
     try:
         config = load_config()
-    except:
+    except (FileNotFoundError, json.JSONDecodeError, KeyError) as err:
+        coolPrint(f"[bold red]Failed to load config: {err}[/bold red]")
         raise typer.Exit(code=1)
-    
-    total_tokens = sum(count_tokens(msg["content"], config['active_model']) for msg in history)
-    context_limit = get_context_limit(config['active_model'])
+
+    total_tokens = sum(
+        count_tokens(msg["content"], config["active_model"]) for msg in history
+    )
+    context_limit = get_context_limit(config["active_model"])
     max_context = int(context_limit * 0.80)
 
     coolPrint(
@@ -243,47 +267,52 @@ def run_chat_loop(file_path: str, history: list):
         if not prompt:
             continue
 
-        user_turn = {
-            "role": "user",
-            "content": prompt
-        }
+        user_turn = {"role": "user", "content": prompt}
 
-        user_tokens = count_tokens(prompt, config['active_model'])
+        user_tokens = count_tokens(prompt, config["active_model"])
         total_tokens += user_tokens
 
         history.append(user_turn)
 
-        user_turn["timestamp"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        user_turn["timestamp"] = datetime.datetime.now(
+            datetime.timezone.utc
+        ).isoformat()
         save_chat(file_path, user_turn)
 
         payload = {"messages": history, "project_path": os.getcwd()}
 
         ai_response = transcribe_stream(payload, "chat")
-        ai_turn = {
-            "role": "assistant",
-            "content": ai_response
-        }
+        ai_turn = {"role": "assistant", "content": ai_response}
 
-        ai_tokens = count_tokens(ai_response, config['active_model'])
+        ai_tokens = count_tokens(ai_response, config["active_model"])
         total_tokens += ai_tokens
 
         history.append(ai_turn)
 
         ai_turn["timestamp"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
         save_chat(file_path, ai_turn)
-        
-        coolPrint(f"Context: [bold #FFFFFF]{total_tokens}/{context_limit}[/bold #FFFFFF] tokens")
+
+        coolPrint(
+            f"Context: [bold #FFFFFF]{total_tokens}/{context_limit}[/bold #FFFFFF] tokens"
+        )
         if (total_tokens) >= max_context:
+
             def run_summarization():
                 nonlocal history, total_tokens
-                asyncio.run(summarize_text(history.copy(), int(context_limit * 0.60), file_path))
+                asyncio.run(
+                    summarize_text(history.copy(), int(context_limit * 0.60), file_path)
+                )
                 # After summarization completes, reload history and recalculate tokens
                 history.clear()
                 history.extend(load_chat_history(file_path))
-                total_tokens = sum(count_tokens(msg["content"], config['active_model']) for msg in history)
-            
+                total_tokens = sum(
+                    count_tokens(msg["content"], config["active_model"])
+                    for msg in history
+                )
+
             thread = threading.Thread(target=run_summarization, daemon=True)
             thread.start()
+
 
 def load_chat_history(file_path: str) -> list:
     """Load chat history from a file."""
@@ -293,30 +322,32 @@ def load_chat_history(file_path: str) -> list:
             line = line.strip()
             if line:
                 history.append(json.loads(line))
-    return history  
+    return history
+
 
 async def summarize_text(history: list[dict], max_context: int, file_path: str) -> None:
     """asyncronously runs a summarize operation seamlessly in the background"""
     window_count = 0
     messages_to_summarize = []
     config = load_config()
-    system_msg = history[0]['content']
+    system_msg = history[0]["content"]
 
     for msg in history:
         if msg == history[0]:
             continue
-        extra_tokens = count_tokens(msg["content"], config['active_model'])
-        if (window_count + extra_tokens)  < max_context:
+        extra_tokens = count_tokens(msg["content"], config["active_model"])
+        if (window_count + extra_tokens) < max_context:
             window_count += extra_tokens
             messages_to_summarize.append(msg)
         else:
             break
 
-    coolPrint(f"Summarizing [bold #FFFFFF]{len(messages_to_summarize)}[/bold #FFFFFF] messages...")
-    formatted_history = "\n".join([
-        f"{msg['role'].upper()}: {msg['content']}"
-        for msg in messages_to_summarize
-    ])
+    coolPrint(
+        f"Summarizing [bold #FFFFFF]{len(messages_to_summarize)}[/bold #FFFFFF] messages..."
+    )
+    formatted_history = "\n".join(
+        [f"{msg['role'].upper()}: {msg['content']}" for msg in messages_to_summarize]
+    )
 
     prompt = f"""You are summarizing a conversation for context retention. 
 
@@ -335,23 +366,25 @@ async def summarize_text(history: list[dict], max_context: int, file_path: str) 
     6. Structure as bullet points for clarity
 
     Output only the summary, no additional commentary."""
-        
-    payload = { 
+
+    payload = {
         "messages": [{"role": "user", "content": prompt}],
-        "project_path": os.getcwd()
+        "project_path": os.getcwd(),
     }
 
     res = await make_api_request_async(endpoint="/hermit/summarize", payload=payload)
     with open(file_path, "r", encoding="utf-8") as f:
         lines = f.readlines()
-    
-    system_line = lines[0] 
-    lines_to_keep = lines[1 + len(messages_to_summarize):]  # Everything after the removed ones
-    
+
+    system_line = lines[0]
+    lines_to_keep = lines[
+        1 + len(messages_to_summarize) :
+    ]  # Everything after the removed ones
+
     summary_msg = {
         "role": "system",
-        "content": f"Summary: {res.json().get("response", "")}",
-        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
+        "content": f"Summary: {res.json().get('response', '')}",
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
     }
     summary_line = json.dumps(summary_msg) + "\n"
 
@@ -359,6 +392,3 @@ async def summarize_text(history: list[dict], max_context: int, file_path: str) 
         f.write(system_line)
         f.write(summary_line)
         f.writelines(lines_to_keep)
-
-
-        

@@ -22,11 +22,13 @@ from .models import (
 
 logging.basicConfig(level=logging.INFO)
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Preloading tokenizers...")
-    await preload_tokenizers()  
+    await preload_tokenizers()
     yield
+
 
 app = FastAPI(lifespan=lifespan)
 
@@ -85,13 +87,15 @@ async def chat(request: ChatRequest):
         headers={
             "Cache-Control": "no-cache",
             "X-Accel-Buffering": "no",
-        }
+        },
     )
+
 
 @app.post("/hermit/summarize")
 async def summarize(request: ChatRequest):
     config, client = check_config_and_load_client(request.project_path)
     return universal_ai_response(request.messages, client, config.active_model)
+
 
 @app.post("/hermit/scribe")
 async def scribe(request: ScribeRequest):
@@ -125,7 +129,9 @@ async def diagnose(request: ErrorRequest):
         media_type="text/plain",
     )
 
+
 def run():
     """Entry point for hermit-daemon command."""
     import uvicorn
+
     uvicorn.run(app, host="127.0.0.1", port=8000)
