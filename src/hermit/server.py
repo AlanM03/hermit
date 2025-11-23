@@ -2,6 +2,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 import logging
 import httpx
+from contextlib import asynccontextmanager
+from localgrid import preload_tokenizers
 
 from .server_utils import (
     check_config_and_load_client,
@@ -21,7 +23,14 @@ from .models import (
 logging.basicConfig(level=logging.INFO)
 
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("Preloading tokenizers...")
+    await preload_tokenizers()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 
 @app.post("/hermit/provider/models")
@@ -75,7 +84,17 @@ async def chat(request: ChatRequest):
     return StreamingResponse(
         universal_ai_stream_with_context(payload, client, config.active_model),
         media_type="text/plain",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
     )
+
+
+@app.post("/hermit/summarize")
+async def summarize(request: ChatRequest):
+    config, client = check_config_and_load_client(request.project_path)
+    return universal_ai_response(request.messages, client, config.active_model)
 
 
 @app.post("/hermit/scribe")
@@ -109,3 +128,10 @@ async def diagnose(request: ErrorRequest):
         universal_ai_stream(payload, client, config.active_model),
         media_type="text/plain",
     )
+
+
+def run():
+    """Entry point for hermit-daemon command."""
+    import uvicorn
+
+    uvicorn.run(app, host="127.0.0.1", port=8000)
