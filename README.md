@@ -39,7 +39,7 @@ Currently, Hermit CLI supports only models running on Ollama and LM Studio platf
 
 ## Architecture Overview
 
-Hermit CLI emphasizes local execution and user data privacy. Core modules include:
+Hermit CLI emphasizes local execution and prioritizes user data privacy. Core modules include:
 
 - **Ingestion & Embedding**: Capture and embed developer codebases for enhanced semantic retrieval
 - **ChromaDB Offline Store**: Efficiently store and query vector embeddings
